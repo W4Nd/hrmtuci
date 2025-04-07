@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация пользователя</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #response {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+        #hr-lead-group, #sla-group {
+            display: none;
+        }
+        .response-item {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Регистрация пользователя</h1>
+    <form id="registerForm">
+        <div class="form-group">
+            <label for="username">Имя пользователя:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Пароль:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="role">Роль:</label>
+            <select id="role" name="role" required onchange="toggleRoleFields()">
+                <option value="">-- Выберите роль --</option>
+                <option value="user">Обычный пользователь</option>
+                <option value="hr">HR-специалист</option>
+                <option value="hr_lead">HR-руководитель</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="hr-lead-group">
+            <label for="hr_lead_id">ID HR-руководителя:</label>
+            <input type="number" id="hr_lead_id" name="hr_lead_id">
+            <small>Должен существовать в системе</small>
+        </div>
+        
+        <div class="form-group" id="sla-group">
+            <label for="sla">Уровень SLA:</label>
+            <input type="text" id="sla" name="sla" placeholder="default_sla">
+        </div>
+        
+        <button type="submit">Зарегистрировать</button>
+    </form>
+    
+    <div id="response"></div>
+
+    <script>
+        function toggleRoleFields() {
+            const role = document.getElementById('role').value;
+            document.getElementById('hr-lead-group').style.display = 
+                role === 'hr' ? 'block' : 'none';
+            document.getElementById('sla-group').style.display = 
+                role === 'hr_lead' ? 'block' : 'none';
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Для числовых полей преобразуем значения
+            if (data.hr_lead_id) data.hr_lead_id = parseInt(data.hr_lead_id);
+            
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                const responseDiv = document.getElementById('response');
+                responseDiv.style.display = 'block';
+                
+                if (response.ok) {
+                    responseDiv.className = 'success';
+                    let html = `
+                        <div class="response-item"><strong>Успех!</strong> Пользователь создан</div>
+                        <div class="response-item">ID пользователя: ${result.user_id}</div>
+                        <div class="response-item">Роль: ${result.role}</div>
+                    `;
+                    
+                    // Показываем hr_lead_id только если он есть в ответе (для HR и HR Lead)
+                    if (result.hr_lead_id !== undefined) {
+                        html += `<div class="response-item">HR Lead ID: ${result.hr_lead_id}</div>`;
+                    }
+                    
+                    responseDiv.innerHTML = html;
+                    e.target.reset();
+                }
+                 else {
+                    responseDiv.className = 'error';
+                    responseDiv.innerHTML = `
+                        <div class="response-item"><strong>Ошибка!</strong></div>
+                        <div class="response-item">${result.error || 'Неизвестная ошибка'}</div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                const responseDiv = document.getElementById('response');
+                responseDiv.style.display = 'block';
+                responseDiv.className = 'error';
+                responseDiv.innerHTML = `
+                    <div class="response-item"><strong>Критическая ошибка!</strong></div>
+                    <div class="response-item">Сервер недоступен или произошла сетевая ошибка</div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
