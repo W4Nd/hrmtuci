@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for
 from app.models.user_models import User, Hr, HrLead
 from app.models import db
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -41,17 +41,36 @@ def register():
         db.session.rollback()
         return jsonify({"error": "Database error", "details": str(e)}), 500
 
-@bp.route('/login', methods=['POST'])
-def login():
-    data = request.form
-    username = data['username']
-    password = data['password']
+@bp.route('/log', methods=['GET', 'POST'])
+def log():
+    if request.method == 'POST':
+        # Получаем данные из формы
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        # Валидация
+        if not username or not password:
+            return render_template('login.html', 
+                               error='Все поля обязательны для заполнения')
+        
+        # Поиск пользователя
+        user = User.query.filter_by(username=username).first()
+        
+        # Проверка пароля
+        if user and check_password_hash(user.password, password):
+            # Успешная аутентификация
+            return redirect(url_for('user.dashboard'))
+        else:
+            # Неверные данные
+            return render_template('login.html', 
+                               error='Неверное имя пользователя или пароль')
+    
+    # GET-запрос - показать форму
+    return render_template('login.html')
 
-    user = User.query.filter_by(username=username).first()
-    if user and check_password_hash(user.password_hash, password):
-        return jsonify({'message': 'Login successful'}), 200
-    else:
-        return jsonify({'message': 'Invalid username or password'}), 401
+@bp.route('/dashboard')
+def dashboard():
+    return "Добро пожаловать в личный кабинет!"
 
 @bp.route('/hr', methods=['POST'])
 def create_hr():
@@ -72,8 +91,4 @@ def create_hrlead():
 @bp.route('/create_user', methods=['GET'])
 def create_user_form():
     return render_template('create_user.html')
-
-@bp.route('/login', methods=['GET'])
-def login():
-    return render_template('login.html')
 

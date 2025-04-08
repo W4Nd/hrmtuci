@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Изменение статуса</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .status-container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .back-link {
+            display: block;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status-container">
+            <a href="/create_resume" class="back-link">← Вернуться к созданию резюме</a>
+            
+            <h2 class="text-center mb-4">Изменение статуса резюме</h2>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Текущий статус</h5>
+                    <p class="card-text" id="currentStatus">{{ current_status }}</p>
+                    <p class="text-muted small" id="lastUpdated"></p>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="new_status" class="form-label">Новый статус</label>
+                <select class="form-select" id="new_status">
+                    <option value="">-- Выберите статус --</option>
+                    <option value="открыта (загружена в систему)">Открыта (загружена в систему)</option>
+                    <option value="изучена (HR просмотрел резюме)">Изучена (HR просмотрел резюме)</option>
+                    <option value="интервью (Рекрут приглашен на интервью с HR)">Интервью</option>
+                    <option value="прошли интервью (Рекрут прошел интервью с HR)">Прошли интервью</option>
+                    <option value="техническое собеседования (Рекрут приглашен на собеседование с заказчиком вакансии)">Техническое собеседование</option>
+                    <option value="пройдено техническое собеседование (Рекрут прошел техническое резюме)">Пройдено техническое собеседование</option>
+                    <option value="оффер (HR выслал предложение рекруту)">Оффер</option>
+                </select>
+                <button id="updateBtn" class="btn btn-primary mt-2 w-100">Обновить статус</button>
+            </div>
+            
+            <div id="updateResult"></div>
+            
+            <h4 class="mt-5 mb-3">История изменений статуса</h4>
+            <div class="list-group" id="historyList">
+                <!-- История будет загружена через JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const resumeId = urlParams.get('resume_id');
+        
+        // Загрузка текущего статуса
+        async function loadCurrentStatus() {
+            try {
+                const response = await fetch(`/resume/${resumeId}/status`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('currentStatus').textContent = data.current_status;
+                    document.getElementById('lastUpdated').textContent = `Последнее обновление: ${new Date(data.last_updated).toLocaleString()}`;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки статуса:', error);
+            }
+        }
+        
+        // Загрузка истории изменений
+        async function loadHistory() {
+            try {
+                const response = await fetch(`/resume/${resumeId}/status/history`);
+                if (response.ok) {
+                    const history = await response.json();
+                    const list = document.getElementById('historyList');
+                    list.innerHTML = '';
+                    
+                    history.forEach(item => {
+                        const itemEl = document.createElement('div');
+                        itemEl.className = 'list-group-item history-item';
+                        itemEl.innerHTML = `
+                            <div class="d-flex justify-content-between">
+                                <span>${item.old_status || '—'} → <strong>${item.new_status}</strong></span>
+                                <small class="text-muted">${new Date(item.change_date).toLocaleString()}</small>
+                            </div>
+                        `;
+                        list.appendChild(itemEl);
+                    });
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки истории:', error);
+            }
+        }
+        
+        // Обработчик изменения статуса
+        document.getElementById('updateBtn').addEventListener('click', async function() {
+            const newStatus = document.getElementById('new_status').value;
+            if (!newStatus) {
+                alert('Пожалуйста, выберите новый статус');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/resume/${resumeId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ new_status: newStatus })
+                });
+                
+                const result = await response.json();
+                const resultDiv = document.getElementById('updateResult');
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                    loadCurrentStatus();
+                    loadHistory();
+                    document.getElementById('new_status').value = '';
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">${result.error}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('updateResult').innerHTML = 
+                    '<div class="alert alert-danger">Ошибка при отправке запроса</div>';
+            }
+        });
+        
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCurrentStatus();
+            loadHistory();
+        });
+    </script>
+</body>
+</html>
