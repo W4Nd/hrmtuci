@@ -10,7 +10,7 @@ bp = Blueprint('resume', __name__)
 def index():
     return redirect(url_for('resume.show_create_resume_form'))
 
-# Создание резюме - API endpoint
+
 @bp.route('/resume', methods=['POST'])
 def create_resume():
     data = request.form
@@ -50,7 +50,7 @@ def create_resume():
         db.session.rollback()
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
-# Изменение статуса - API endpoint
+
 @bp.route('/resume/<int:resume_id>/status', methods=['PUT'])
 def change_resume_status(resume_id):
     data = request.json
@@ -63,7 +63,7 @@ def change_resume_status(resume_id):
     else:
         return jsonify({'error': message}), 500
 
-# Получение текущего статуса
+
 @bp.route('/resume/<int:resume_id>/status', methods=['GET'])
 def get_resume_status(resume_id):
     resume = Resume.query.get_or_404(resume_id)
@@ -72,7 +72,7 @@ def get_resume_status(resume_id):
         'last_updated': resume.date_last_changes.isoformat()
     })
 
-# Получение истории статусов
+
 @bp.route('/resume/<int:resume_id>/status/history', methods=['GET'])
 def get_status_history(resume_id):
     logs = StatusChangeLogs.query.filter_by(resume_id=resume_id)\
@@ -84,12 +84,12 @@ def get_status_history(resume_id):
         'change_date': log.change_date.isoformat()
     } for log in logs])
 
-# Форма создания резюме
+
 @bp.route('/create_resume')
 def show_create_resume_form():
     return render_template('create_resume.html')
 
-# Форма изменения статуса
+
 @bp.route('/change_status')
 def show_change_status_form():
     resume_id = request.args.get('resume_id')
@@ -106,8 +106,8 @@ def show_change_status_form():
                          resume_id=resume_id,
                          current_status=resume.status)
 
+
 def update_resume_status(resume_id, new_status):
-    """Общая функция обновления статуса"""
     try:
         resume = Resume.query.get(resume_id)
         if not resume:

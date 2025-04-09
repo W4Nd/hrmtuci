@@ -28,7 +28,6 @@ def register():
             "role": user.role
         }
         
-        # Добавляем hr_lead_id только если он есть
         if hr_lead_id is not None:
             response_data['hr_lead_id'] = hr_lead_id
             
@@ -41,36 +40,30 @@ def register():
         db.session.rollback()
         return jsonify({"error": "Database error", "details": str(e)}), 500
 
+
 @bp.route('/log', methods=['GET', 'POST'])
 def log():
     if request.method == 'POST':
-        # Получаем данные из формы
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Валидация
         if not username or not password:
             return render_template('login.html', 
                                error='Все поля обязательны для заполнения')
         
-        # Поиск пользователя
         user = User.query.filter_by(username=username).first()
         
-        # Проверка пароля
         if user and check_password_hash(user.password, password):
-            # Успешная аутентификация
             return redirect(url_for('user.dashboard'))
         else:
-            # Неверные данные
-            return render_template('login.html', 
-                               error='Неверное имя пользователя или пароль')
-    
-    # GET-запрос - показать форму
+            return render_template('login.html', error='Неверное имя пользователя или пароль') 
     return render_template('login.html')
+
 
 @bp.route('/dashboard')
 def dashboard():
     return "Добро пожаловать в личный кабинет!"
+
 
 @bp.route('/hr', methods=['POST'])
 def create_hr():
@@ -80,6 +73,7 @@ def create_hr():
     db.session.commit()
     return jsonify({'message': 'Hr created successfully'}), 201
 
+
 @bp.route('/hrlead', methods=['POST'])
 def create_hrlead():
     data = request.form
@@ -87,6 +81,7 @@ def create_hrlead():
     db.session.add(hrlead)
     db.session.commit()
     return jsonify({'message': 'HrLead created successfully'}), 201
+
 
 @bp.route('/create_user', methods=['GET'])
 def create_user_form():
