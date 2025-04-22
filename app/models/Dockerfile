@@ -1,0 +1,8 @@
+FROM mysql:8.0
+
+ENV MYSQL_ROOT_PASSWORD=(Lugovaya34)
+ENV MYSQL_DATABASE=hr
+
+EXPOSE 3306
+
+CMD ["mysqld"]
